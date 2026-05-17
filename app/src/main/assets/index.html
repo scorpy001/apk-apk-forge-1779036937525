@@ -1,0 +1,1394 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>APK Forge — HTML → Android</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --surface2: #1a1a24;
+    --border: #2a2a3a;
+    --accent: #00ff88;
+    --accent2: #ff4466;
+    --accent3: #4488ff;
+    --text: #e8e8f0;
+    --muted: #6666aa;
+    --glow: 0 0 20px rgba(0,255,136,0.3);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* animated grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,255,136,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,255,136,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .noise {
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.4;
+  }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 40px 20px 80px;
+  }
+
+  /* HEADER */
+  header {
+    margin-bottom: 48px;
+    animation: fadeDown 0.6s ease both;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 8px;
+  }
+
+  .logo-icon {
+    width: 40px;
+    height: 40px;
+    background: var(--accent);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    box-shadow: var(--glow);
+    animation: pulse 3s ease infinite;
+  }
+
+  @keyframes pulse {
+    0%,100% { box-shadow: 0 0 20px rgba(0,255,136,0.3); }
+    50% { box-shadow: 0 0 40px rgba(0,255,136,0.6); }
+  }
+
+  h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: 2.2rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    background: linear-gradient(135deg, var(--accent), var(--accent3));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .tagline {
+    color: var(--muted);
+    font-size: 0.85rem;
+    margin-top: 4px;
+    letter-spacing: 0.05em;
+  }
+
+  .badge-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 16px;
+  }
+
+  .badge {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 4px 12px;
+    font-size: 0.72rem;
+    color: var(--accent);
+    letter-spacing: 0.08em;
+  }
+
+  /* STEPS */
+  .steps {
+    display: flex;
+    gap: 0;
+    margin-bottom: 32px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    animation: fadeUp 0.6s 0.1s ease both;
+  }
+
+  .step {
+    flex: 1;
+    padding: 12px 16px;
+    text-align: center;
+    font-size: 0.72rem;
+    color: var(--muted);
+    border-right: 1px solid var(--border);
+    transition: all 0.3s;
+    cursor: default;
+    letter-spacing: 0.06em;
+  }
+
+  .step:last-child { border-right: none; }
+
+  .step.active {
+    background: rgba(0,255,136,0.08);
+    color: var(--accent);
+    border-bottom: 2px solid var(--accent);
+  }
+
+  .step.done {
+    background: rgba(0,255,136,0.04);
+    color: var(--accent);
+    opacity: 0.6;
+  }
+
+  .step-num {
+    display: block;
+    font-family: 'Syne', sans-serif;
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-bottom: 2px;
+  }
+
+  /* PANELS */
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px;
+    margin-bottom: 20px;
+    animation: fadeUp 0.6s ease both;
+    display: none;
+  }
+
+  .panel.visible { display: block; }
+
+  .panel-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--accent);
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    letter-spacing: 0.03em;
+  }
+
+  .panel-title::before {
+    content: '';
+    width: 3px;
+    height: 18px;
+    background: var(--accent);
+    border-radius: 2px;
+    box-shadow: var(--glow);
+  }
+
+  /* FORM ELEMENTS */
+  .field {
+    margin-bottom: 18px;
+  }
+
+  label {
+    display: block;
+    font-size: 0.72rem;
+    color: var(--muted);
+    margin-bottom: 6px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  input[type="text"],
+  input[type="password"],
+  input[type="url"],
+  select,
+  textarea {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85rem;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+
+  input:focus, select:focus, textarea:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(0,255,136,0.1);
+  }
+
+  textarea {
+    resize: vertical;
+    min-height: 180px;
+    font-size: 0.78rem;
+    line-height: 1.5;
+  }
+
+  .field-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+
+  @media (max-width: 600px) { .field-row { grid-template-columns: 1fr; } }
+
+  /* COLOR PICKER */
+  .color-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+
+  input[type="color"] {
+    width: 44px;
+    height: 36px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface2);
+    cursor: pointer;
+    padding: 2px;
+  }
+
+  .color-preview {
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
+
+  /* ICON UPLOAD */
+  .icon-drop {
+    border: 2px dashed var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+  }
+
+  .icon-drop:hover, .icon-drop.drag {
+    border-color: var(--accent);
+    background: rgba(0,255,136,0.05);
+  }
+
+  .icon-drop input { display: none; }
+
+  .icon-preview {
+    width: 72px;
+    height: 72px;
+    border-radius: 16px;
+    object-fit: cover;
+    margin: 0 auto 8px;
+    display: none;
+    border: 2px solid var(--accent);
+  }
+
+  .icon-placeholder {
+    font-size: 2.5rem;
+    margin-bottom: 8px;
+  }
+
+  .icon-drop p {
+    font-size: 0.78rem;
+    color: var(--muted);
+  }
+
+  /* TOKEN HELP */
+  .help-box {
+    background: var(--surface2);
+    border: 1px solid rgba(68,136,255,0.3);
+    border-radius: 10px;
+    padding: 14px 16px;
+    font-size: 0.78rem;
+    color: var(--muted);
+    margin-top: 10px;
+    line-height: 1.6;
+  }
+
+  .help-box a {
+    color: var(--accent3);
+    text-decoration: none;
+  }
+
+  .help-box a:hover { text-decoration: underline; }
+
+  .help-box strong { color: var(--text); }
+
+  /* BUTTONS */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    border-radius: 10px;
+    font-family: 'Syne', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 700;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s;
+    letter-spacing: 0.03em;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #000;
+    box-shadow: var(--glow);
+  }
+
+  .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0 30px rgba(0,255,136,0.5);
+  }
+
+  .btn-primary:active { transform: translateY(0); }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid var(--border);
+  }
+
+  .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+
+  .btn-danger {
+    background: rgba(255,68,102,0.15);
+    color: var(--accent2);
+    border: 1px solid rgba(255,68,102,0.3);
+  }
+
+  .btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    transform: none !important;
+  }
+
+  .btn-row {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 24px;
+    flex-wrap: wrap;
+  }
+
+  /* STATUS / LOG */
+  .status-box {
+    background: #050508;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    font-size: 0.78rem;
+    line-height: 1.8;
+    min-height: 120px;
+    max-height: 260px;
+    overflow-y: auto;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .log-line { display: flex; gap: 8px; }
+  .log-time { color: var(--muted); min-width: 60px; }
+  .log-ok { color: var(--accent); }
+  .log-err { color: var(--accent2); }
+  .log-info { color: var(--accent3); }
+  .log-warn { color: #ffaa00; }
+
+  /* PROGRESS BAR */
+  .progress-wrap {
+    background: var(--surface2);
+    border-radius: 4px;
+    height: 4px;
+    margin: 16px 0;
+    overflow: hidden;
+  }
+
+  .progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent3));
+    border-radius: 4px;
+    transition: width 0.5s ease;
+    box-shadow: 0 0 10px rgba(0,255,136,0.5);
+    width: 0%;
+  }
+
+  /* DOWNLOAD CARD */
+  .download-card {
+    background: linear-gradient(135deg, rgba(0,255,136,0.08), rgba(68,136,255,0.08));
+    border: 1px solid rgba(0,255,136,0.3);
+    border-radius: 16px;
+    padding: 28px;
+    text-align: center;
+    display: none;
+    animation: fadeUp 0.5s ease both;
+  }
+
+  .download-card.visible { display: block; }
+
+  .download-card h3 {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: var(--accent);
+    margin-bottom: 8px;
+  }
+
+  .download-card p {
+    color: var(--muted);
+    font-size: 0.8rem;
+    margin-bottom: 20px;
+  }
+
+  .apk-info {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+
+  .apk-stat {
+    text-align: center;
+    font-size: 0.72rem;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+  }
+
+  .apk-stat strong {
+    display: block;
+    font-size: 1.1rem;
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+  }
+
+  /* SPINNER */
+  .spinner {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(0,255,136,0.3);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ANIMATIONS */
+  @keyframes fadeDown {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--surface); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  /* WARNING */
+  .warn-box {
+    background: rgba(255,170,0,0.08);
+    border: 1px solid rgba(255,170,0,0.25);
+    border-radius: 10px;
+    padding: 12px 16px;
+    font-size: 0.78rem;
+    color: #ffaa00;
+    margin-bottom: 16px;
+    line-height: 1.6;
+  }
+
+  /* HTML FILE DROP */
+  .html-drop {
+    border: 2px dashed var(--border);
+    border-radius: 12px;
+    padding: 32px 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .html-drop:hover, .html-drop.drag {
+    border-color: var(--accent);
+    background: rgba(0,255,136,0.05);
+  }
+
+  .html-drop.loaded {
+    border-color: rgba(0,255,136,0.4);
+    background: rgba(0,255,136,0.04);
+    border-style: solid;
+  }
+
+
+
+  .orient-btns {
+    display: flex;
+    gap: 8px;
+  }
+
+  .orient-btn {
+    flex: 1;
+    padding: 8px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--muted);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.78rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+  }
+
+  .orient-btn.selected {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(0,255,136,0.08);
+  }
+</style>
+</head>
+<body>
+<div class="noise"></div>
+
+<div class="container">
+  <header>
+    <div class="logo">
+      <div class="logo-icon">⚡</div>
+      <div>
+        <h1>APK Forge</h1>
+        <div class="tagline">// HTML → Android APK · 100% gratuit · fără reclame · fără tokeni</div>
+      </div>
+    </div>
+    <div class="badge-row">
+      <span class="badge">GITHUB ACTIONS BUILD</span>
+      <span class="badge">WEBVIEW WRAPPER</span>
+      <span class="badge">APK SEMNAT</span>
+      <span class="badge">OFFLINE SUPPORT</span>
+    </div>
+  </header>
+
+  <div class="steps" id="stepsBar">
+    <div class="step active" id="step1">
+      <span class="step-num">01</span>GitHub Token
+    </div>
+    <div class="step" id="step2">
+      <span class="step-num">02</span>HTML & Config
+    </div>
+    <div class="step" id="step3">
+      <span class="step-num">03</span>Build APK
+    </div>
+  </div>
+
+  <!-- PANEL 1: GitHub Token -->
+  <div class="panel visible" id="panel1">
+    <div class="panel-title">GitHub Token — o singură dată</div>
+
+    <div class="warn-box">
+      ⚠️ Token-ul este stocat local în browser (localStorage). Nu este trimis nicăieri altundeva decât la api.github.com.
+    </div>
+
+    <div class="field">
+      <label>GitHub Personal Access Token</label>
+      <input type="password" id="ghToken" placeholder="ghp_xxxxxxxxxxxxxxxx" autocomplete="off">
+    </div>
+
+    <div class="help-box">
+      <strong>Cum generezi token-ul (gratuit, 2 minute):</strong><br>
+      1. Mergi la <a href="https://github.com/settings/tokens/new" target="_blank">github.com/settings/tokens/new</a><br>
+      2. Note: <code>apk-forge</code> · Expiration: <code>No expiration</code><br>
+      3. Bifează: <strong>repo</strong> (full) + <strong>workflow</strong><br>
+      4. Click <strong>Generate token</strong> → copiază → lipește sus<br><br>
+      Token-ul îți permite să creezi repo-uri și să pornești GitHub Actions automat.
+    </div>
+
+    <div class="field" style="margin-top:16px;">
+      <label>GitHub Username</label>
+      <input type="text" id="ghUser" placeholder="scorpy001">
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="validateToken()">
+        Verifică Token →
+      </button>
+    </div>
+  </div>
+
+  <!-- PANEL 2: HTML & Config -->
+  <div class="panel" id="panel2">
+    <div class="panel-title">Configurează aplicația</div>
+
+    <div class="field-row">
+      <div class="field">
+        <label>Numele aplicației</label>
+        <input type="text" id="appName" placeholder="MyCoolApp" oninput="updatePackage()">
+      </div>
+      <div class="field">
+        <label>Package ID (auto)</label>
+        <input type="text" id="packageId" placeholder="com.yourname.mycoolapp">
+      </div>
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label>Culoare Status Bar</label>
+        <div class="color-row">
+          <input type="color" id="statusColor" value="#1a1a2e">
+          <span class="color-preview" id="statusColorHex">#1a1a2e</span>
+        </div>
+      </div>
+      <div class="field">
+        <label>Culoare Accent</label>
+        <div class="color-row">
+          <input type="color" id="accentColor" value="#00ff88">
+          <span class="color-preview" id="accentColorHex">#00ff88</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Orientare ecran</label>
+      <div class="orient-btns">
+        <div class="orient-btn selected" onclick="selectOrient(this,'portrait')">📱 Portrait</div>
+        <div class="orient-btn" onclick="selectOrient(this,'landscape')">🖥️ Landscape</div>
+        <div class="orient-btn" onclick="selectOrient(this,'unspecified')">🔄 Auto</div>
+      </div>
+      <input type="hidden" id="orientation" value="portrait">
+    </div>
+
+    <div class="field">
+      <label>Icon aplicație (512×512 recomandat)</label>
+      <div class="icon-drop" id="iconDrop" onclick="document.getElementById('iconFile').click()">
+        <input type="file" id="iconFile" accept="image/*" onchange="loadIcon(this)">
+        <img class="icon-preview" id="iconPreview">
+        <div class="icon-placeholder" id="iconPlaceholder">📦</div>
+        <p>Click sau drag & drop · PNG/JPG · min 192×192</p>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Fișier HTML al aplicației</label>
+      <div class="html-drop" id="htmlDrop" onclick="document.getElementById('htmlFile').click()">
+        <input type="file" id="htmlFile" accept=".html,.htm" onchange="loadHTML(this)" style="display:none">
+        <div id="htmlPlaceholder">
+          <div style="font-size:2.2rem;margin-bottom:10px">📄</div>
+          <div style="font-size:0.9rem;color:var(--text);font-family:'Syne',sans-serif;font-weight:700">Drag & drop fișierul HTML</div>
+          <div style="font-size:0.75rem;color:var(--muted);margin-top:6px">sau click pentru a selecta · .html / .htm</div>
+        </div>
+        <div id="htmlLoaded" style="display:none">
+          <div style="font-size:2rem;margin-bottom:8px">✅</div>
+          <div id="htmlFileName" style="font-size:0.9rem;color:var(--accent);font-family:'Syne',sans-serif;font-weight:700"></div>
+          <div id="htmlFileSize" style="font-size:0.72rem;color:var(--muted);margin-top:4px"></div>
+          <div style="font-size:0.72rem;color:var(--muted);margin-top:6px">Click pentru a schimba fișierul</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-ghost" onclick="goStep(1)">← Înapoi</button>
+      <button class="btn btn-primary" onclick="goStep(3)">Build APK →</button>
+    </div>
+  </div>
+
+  <!-- PANEL 3: Build -->
+  <div class="panel" id="panel3">
+    <div class="panel-title">Build în curs</div>
+
+    <div class="progress-wrap">
+      <div class="progress-bar" id="progressBar"></div>
+    </div>
+
+    <div class="status-box" id="logBox"></div>
+
+    <div class="download-card" id="downloadCard">
+      <h3>✅ APK Gata!</h3>
+      <p>Build-ul a fost finalizat cu succes pe GitHub Actions</p>
+      <div class="apk-info">
+        <div class="apk-stat"><strong id="apkName">—</strong>Nume APK</div>
+        <div class="apk-stat"><strong id="apkRepo">—</strong>Repo GitHub</div>
+        <div class="apk-stat"><strong>~3-5MB</strong>Dimensiune</div>
+      </div>
+      <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+        <button class="btn btn-primary" onclick="downloadAPK()" id="dlBtn">⬇️ Descarcă APK</button>
+        <a id="actionsLink" href="#" target="_blank">
+          <button class="btn btn-ghost">🔗 Vezi pe GitHub Actions</button>
+        </a>
+      </div>
+    </div>
+
+    <div class="btn-row" id="buildBtnRow">
+      <button class="btn btn-ghost" onclick="goStep(2)" id="backBtn">← Înapoi</button>
+      <button class="btn btn-primary" onclick="startBuild()" id="buildBtn">
+        <span class="spinner" id="buildSpinner" style="display:none"></span>
+        ⚡ Start Build
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════
+let state = {
+  token: '',
+  username: '',
+  repoName: '',
+  runId: null,
+  artifactUrl: null,
+  orientation: 'portrait',
+  iconBase64: null
+};
+
+// Load saved token
+window.addEventListener('load', () => {
+  const saved = localStorage.getItem('apkforge_token');
+  const savedUser = localStorage.getItem('apkforge_user');
+  if (saved) document.getElementById('ghToken').value = saved;
+  if (savedUser) document.getElementById('ghUser').value = savedUser;
+
+  document.getElementById('statusColor').addEventListener('input', e => {
+    document.getElementById('statusColorHex').textContent = e.target.value;
+  });
+  document.getElementById('accentColor').addEventListener('input', e => {
+    document.getElementById('accentColorHex').textContent = e.target.value;
+  });
+
+  // HTML file drop zone
+  const htmlDrop = document.getElementById('htmlDrop');
+  htmlDrop.addEventListener('dragover', e => { e.preventDefault(); htmlDrop.classList.add('drag'); });
+  htmlDrop.addEventListener('dragleave', () => htmlDrop.classList.remove('drag'));
+  htmlDrop.addEventListener('drop', e => {
+    e.preventDefault();
+    htmlDrop.classList.remove('drag');
+    const file = e.dataTransfer.files[0];
+    if (file) processHTMLFile(file);
+  });
+
+  const drop = document.getElementById('iconDrop');
+  drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('drag'); });
+  drop.addEventListener('dragleave', () => drop.classList.remove('drag'));
+  drop.addEventListener('drop', e => {
+    e.preventDefault();
+    drop.classList.remove('drag');
+    const file = e.dataTransfer.files[0];
+    if (file) processIcon(file);
+  });
+});
+
+function selectOrient(el, val) {
+  document.querySelectorAll('.orient-btn').forEach(b => b.classList.remove('selected'));
+  el.classList.add('selected');
+  document.getElementById('orientation').value = val;
+  state.orientation = val;
+}
+
+function updatePackage() {
+  const name = document.getElementById('appName').value;
+  const user = document.getElementById('ghUser').value || 'myapp';
+  const pkg = 'com.' + user.toLowerCase().replace(/[^a-z0-9]/g,'') + '.' +
+    name.toLowerCase().replace(/[^a-z0-9]/g,'');
+  document.getElementById('packageId').value = pkg;
+}
+
+function loadHTML(input) {
+  if (input.files[0]) processHTMLFile(input.files[0]);
+}
+
+function processHTMLFile(file) {
+  if (!file.name.match(/\.html?$/i)) {
+    alert('Selectează un fișier .html sau .htm!');
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = e => {
+    state.htmlContent = e.target.result;
+    const drop = document.getElementById('htmlDrop');
+    drop.classList.add('loaded');
+    document.getElementById('htmlPlaceholder').style.display = 'none';
+    document.getElementById('htmlLoaded').style.display = 'block';
+    document.getElementById('htmlFileName').textContent = file.name;
+    const kb = (file.size / 1024).toFixed(1);
+    document.getElementById('htmlFileSize').textContent = kb + ' KB · ' + e.target.result.split('\n').length + ' linii';
+    // auto-fill app name from filename
+    if (!document.getElementById('appName').value) {
+      const name = file.name.replace(/\.html?$/i,'').replace(/[-_]/g,' ').replace(/\b\w/g, c => c.toUpperCase());
+      document.getElementById('appName').value = name;
+      updatePackage();
+    }
+  };
+  reader.readAsText(file);
+}
+
+
+  if (input.files[0]) processIcon(input.files[0]);
+}
+
+function processIcon(file) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    state.iconBase64 = e.target.result.split(',')[1];
+    const img = document.getElementById('iconPreview');
+    img.src = e.target.result;
+    img.style.display = 'block';
+    document.getElementById('iconPlaceholder').style.display = 'none';
+  };
+  reader.readAsDataURL(file);
+}
+
+// ═══════════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════════
+function goStep(n) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('visible'));
+  document.querySelectorAll('.step').forEach((s, i) => {
+    s.classList.remove('active', 'done');
+    if (i + 1 < n) s.classList.add('done');
+    if (i + 1 === n) s.classList.add('active');
+  });
+  document.getElementById('panel' + n).classList.add('visible');
+}
+
+// ═══════════════════════════════════════════════
+// STEP 1: Validate Token
+// ═══════════════════════════════════════════════
+async function validateToken() {
+  const token = document.getElementById('ghToken').value.trim();
+  const user = document.getElementById('ghUser').value.trim();
+
+  if (!token || !user) {
+    alert('Completează token-ul și username-ul!');
+    return;
+  }
+
+  try {
+    const r = await fetch('https://api.github.com/user', {
+      headers: { Authorization: 'token ' + token }
+    });
+    if (!r.ok) throw new Error('Token invalid!');
+    const data = await r.json();
+
+    localStorage.setItem('apkforge_token', token);
+    localStorage.setItem('apkforge_user', user);
+    state.token = token;
+    state.username = data.login || user;
+
+    document.getElementById('ghUser').value = state.username;
+    goStep(2);
+  } catch(e) {
+    alert('❌ ' + e.message + '\nVerifică token-ul și încearcă din nou.');
+  }
+}
+
+// ═══════════════════════════════════════════════
+// LOGGING
+// ═══════════════════════════════════════════════
+function log(msg, type='info') {
+  const box = document.getElementById('logBox');
+  const time = new Date().toLocaleTimeString('ro-RO', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  const icons = { ok:'✓', err:'✗', info:'›', warn:'⚠' };
+  const line = document.createElement('div');
+  line.className = 'log-line';
+  line.innerHTML = `<span class="log-time">[${time}]</span><span class="log-${type}">${icons[type]||'›'} ${msg}</span>`;
+  box.appendChild(line);
+  box.scrollTop = box.scrollHeight;
+}
+
+function setProgress(pct) {
+  document.getElementById('progressBar').style.width = pct + '%';
+}
+
+// ═══════════════════════════════════════════════
+// STEP 3: BUILD
+// ═══════════════════════════════════════════════
+async function startBuild() {
+  const appName = document.getElementById('appName').value.trim() || 'MyApp';
+  const packageId = document.getElementById('packageId').value.trim() || 'com.apkforge.myapp';
+  const htmlCode = state.htmlContent || '';
+  const statusColor = document.getElementById('statusColor').value;
+  const accentColor = document.getElementById('accentColor').value;
+  const orientation = document.getElementById('orientation').value;
+
+  if (!htmlCode) { alert('Încarcă un fișier HTML mai întâi!'); return; }
+
+  const btn = document.getElementById('buildBtn');
+  const spinner = document.getElementById('buildSpinner');
+  btn.disabled = true;
+  spinner.style.display = 'inline-block';
+  document.getElementById('backBtn').disabled = true;
+  document.getElementById('logBox').innerHTML = '';
+  document.getElementById('downloadCard').classList.remove('visible');
+  setProgress(0);
+
+  state.repoName = 'apk-' + appName.toLowerCase().replace(/[^a-z0-9]/g,'-') + '-' + Date.now();
+
+  try {
+    // 1. Create repo
+    log('Creez repo GitHub: ' + state.repoName);
+    setProgress(8);
+    await createRepo();
+    log('Repo creat cu succes', 'ok');
+    setProgress(15);
+
+    // 2. Push files
+    log('Generez proiect Android (WebView wrapper)...');
+    await pushAndroidProject(appName, packageId, htmlCode, statusColor, accentColor, orientation);
+    log('Fișiere Android încărcate', 'ok');
+    setProgress(35);
+
+    // 3. Trigger workflow
+    log('Pornesc GitHub Actions workflow...');
+    await triggerWorkflow();
+    log('Build pornit!', 'ok');
+    setProgress(45);
+
+    // 4. Poll
+    log('Aștept build... (poate dura 3-6 minute)', 'warn');
+    await pollBuild();
+
+  } catch(e) {
+    log('EROARE: ' + e.message, 'err');
+    btn.disabled = false;
+    spinner.style.display = 'none';
+    document.getElementById('backBtn').disabled = false;
+  }
+}
+
+// ═══════════════════════════════════════════════
+// GITHUB API HELPERS
+// ═══════════════════════════════════════════════
+async function ghFetch(path, method='GET', body=null) {
+  const opts = {
+    method,
+    headers: {
+      Authorization: 'token ' + state.token,
+      Accept: 'application/vnd.github.v3+json',
+      'Content-Type': 'application/json'
+    }
+  };
+  if (body) opts.body = JSON.stringify(body);
+  const r = await fetch('https://api.github.com' + path, opts);
+  if (!r.ok) {
+    const err = await r.json().catch(() => ({}));
+    throw new Error(err.message || r.statusText);
+  }
+  return r.json().catch(() => ({}));
+}
+
+async function createRepo() {
+  await ghFetch('/user/repos', 'POST', {
+    name: state.repoName,
+    private: false,
+    auto_init: true,
+    description: 'APK built by APK Forge'
+  });
+  // Așteaptă GitHub să inițializeze repo-ul complet (branch main + primul commit)
+  await sleep(4000);
+}
+
+async function pushFile(path, content, message) {
+  const encoded = btoa(unescape(encodeURIComponent(content)));
+  await ghFetch(`/repos/${state.username}/${state.repoName}/contents/${path}`, 'PUT', {
+    message,
+    content: encoded
+  });
+}
+
+async function pushFileBase64(path, content, message) {
+  await ghFetch(`/repos/${state.username}/${state.repoName}/contents/${path}`, 'PUT', {
+    message,
+    content
+  });
+}
+
+// ═══════════════════════════════════════════════
+// ANDROID PROJECT FILES — batch Git Tree API
+// ═══════════════════════════════════════════════
+function toB64(str) {
+  return btoa(unescape(encodeURIComponent(str)));
+}
+
+async function pushAndroidProject(appName, packageId, html, statusColor, accentColor, orientation) {
+  const pkgPath = packageId.replace(/\./g, '/');
+
+  // Construiește toate fișierele ca array
+  const files = [
+    {
+      path: 'settings.gradle',
+      content: `rootProject.name = "${appName}"\ninclude ':app'`
+    },
+    {
+      path: 'build.gradle',
+      content: `buildscript {
+    repositories { google(); mavenCentral() }
+    dependencies { classpath 'com.android.tools.build:gradle:8.2.2' }
+}
+allprojects {
+    repositories { google(); mavenCentral() }
+}`
+    },
+    {
+      path: 'gradle/wrapper/gradle-wrapper.properties',
+      content: `distributionBase=GRADLE_USER_HOME
+distributionPath=wrapper/dists
+distributionUrl=https\\://services.gradle.org/distributions/gradle-8.4-bin.zip
+zipStoreBase=GRADLE_USER_HOME
+zipStorePath=wrapper/dists`
+    },
+    {
+      path: 'app/build.gradle',
+      content: `plugins {
+    id 'com.android.application'
+}
+android {
+    compileSdk 34
+    namespace "${packageId}"
+    defaultConfig {
+        applicationId "${packageId}"
+        minSdk 21
+        targetSdk 34
+        versionCode 1
+        versionName "1.0"
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig signingConfigs.debug
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+dependencies {
+    implementation 'androidx.appcompat:appcompat:1.6.1'
+    implementation 'androidx.webkit:webkit:1.8.0'
+}`
+    },
+    {
+      path: 'app/src/main/AndroidManifest.xml',
+      content: `<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+    <application
+        android:label="${appName}"
+        android:theme="@style/AppTheme"
+        android:allowBackup="true"
+        android:usesCleartextTraffic="true"
+        android:hardwareAccelerated="true">
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:screenOrientation="${orientation}"
+            android:configChanges="orientation|screenSize|keyboardHidden">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>`
+    },
+    {
+      path: `app/src/main/java/${pkgPath}/MainActivity.java`,
+      content: `package ${packageId};
+
+import android.app.Activity;
+import android.os.Bundle;
+import android.webkit.WebSettings;
+import android.webkit.WebView;
+import android.webkit.WebViewClient;
+import android.webkit.WebChromeClient;
+import android.view.Window;
+import android.view.WindowManager;
+import android.graphics.Color;
+
+public class MainActivity extends Activity {
+    private WebView webView;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        requestWindowFeature(Window.FEATURE_NO_TITLE);
+        getWindow().setFlags(
+            WindowManager.LayoutParams.FLAG_FULLSCREEN,
+            WindowManager.LayoutParams.FLAG_FULLSCREEN
+        );
+        webView = new WebView(this);
+        setContentView(webView);
+        WebSettings s = webView.getSettings();
+        s.setJavaScriptEnabled(true);
+        s.setDomStorageEnabled(true);
+        s.setAllowFileAccessFromFileURLs(true);
+        s.setAllowUniversalAccessFromFileURLs(true);
+        s.setMediaPlaybackRequiresUserGesture(false);
+        s.setCacheMode(WebSettings.LOAD_DEFAULT);
+        s.setUseWideViewPort(true);
+        s.setLoadWithOverviewMode(true);
+        webView.setWebViewClient(new WebViewClient());
+        webView.setWebChromeClient(new WebChromeClient());
+        webView.loadUrl("file:///android_asset/index.html");
+    }
+
+    @Override
+    public void onBackPressed() {
+        if (webView.canGoBack()) webView.goBack();
+        else super.onBackPressed();
+    }
+}`
+    },
+    {
+      path: 'app/src/main/assets/index.html',
+      content: html
+    },
+    {
+      path: 'app/src/main/res/values/colors.xml',
+      content: `<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="statusBar">${statusColor}</color>
+    <color name="accent">${accentColor}</color>
+</resources>`
+    },
+    {
+      path: 'app/src/main/res/values/styles.xml',
+      content: `<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="AppTheme" parent="Theme.AppCompat.Light.NoActionBar">
+        <item name="colorPrimary">${statusColor}</item>
+        <item name="colorPrimaryDark">${statusColor}</item>
+        <item name="colorAccent">${accentColor}</item>
+        <item name="android:windowBackground">@android:color/black</item>
+    </style>
+</resources>`
+    },
+    {
+      path: '.github/workflows/build.yml',
+      content: `name: Build APK
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+      - name: Setup Gradle
+        uses: gradle/gradle-build-action@v2
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+      - name: Build Debug APK
+        run: ./gradlew assembleDebug
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-debug
+          path: app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 7`
+    },
+    {
+      path: 'gradlew',
+      content: `#!/bin/sh\nexec gradle "$@"`
+    }
+  ];
+
+  log(`Încarc ${files.length} fișiere via Git Tree API...`);
+
+  // 1. Obține SHA-ul ultimului commit (din README auto-init)
+  const refData = await ghFetch(`/repos/${state.username}/${state.repoName}/git/ref/heads/main`);
+  const baseCommitSha = refData.object.sha;
+
+  // 2. Obține tree SHA-ul de bază
+  const commitData = await ghFetch(`/repos/${state.username}/${state.repoName}/git/commits/${baseCommitSha}`);
+  const baseTreeSha = commitData.tree.sha;
+
+  log('Creez Git tree...');
+
+  // 3. Creează blobs pentru fiecare fișier și construiește tree
+  const treeItems = [];
+  for (const f of files) {
+    const blobData = await ghFetch(`/repos/${state.username}/${state.repoName}/git/blobs`, 'POST', {
+      content: toB64(f.content),
+      encoding: 'base64'
+    });
+    treeItems.push({
+      path: f.path,
+      mode: f.path === 'gradlew' ? '100755' : '100644',
+      type: 'blob',
+      sha: blobData.sha
+    });
+  }
+
+  // 4. Creează tree-ul nou
+  const newTree = await ghFetch(`/repos/${state.username}/${state.repoName}/git/trees`, 'POST', {
+    base_tree: baseTreeSha,
+    tree: treeItems
+  });
+
+  // 5. Creează commit nou
+  const newCommit = await ghFetch(`/repos/${state.username}/${state.repoName}/git/commits`, 'POST', {
+    message: 'init: Android WebView project',
+    tree: newTree.sha,
+    parents: [baseCommitSha]
+  });
+
+  // 6. Update ref main → noul commit
+  await ghFetch(`/repos/${state.username}/${state.repoName}/git/refs/heads/main`, 'PATCH', {
+    sha: newCommit.sha,
+    force: false
+  });
+
+  log('Toate fișierele proiectului au fost generate', 'ok');
+}
+
+async function triggerWorkflow() {
+  // Small delay to ensure files are indexed by GitHub
+  await sleep(3000);
+  await ghFetch(`/repos/${state.username}/${state.repoName}/actions/workflows/build.yml/dispatches`, 'POST', {
+    ref: 'main'
+  });
+}
+
+// ═══════════════════════════════════════════════
+// POLL BUILD
+// ═══════════════════════════════════════════════
+async function pollBuild() {
+  const maxWait = 60; // max 10 min (60 * 10s)
+  let tries = 0;
+  let runId = null;
+
+  // Wait for run to appear
+  log('Aștept să apară workflow-ul...');
+  while (tries < 15) {
+    await sleep(8000);
+    tries++;
+    try {
+      const data = await ghFetch(`/repos/${state.username}/${state.repoName}/actions/runs?per_page=5`);
+      if (data.workflow_runs && data.workflow_runs.length > 0) {
+        runId = data.workflow_runs[0].id;
+        log(`Workflow găsit: #${runId}`, 'ok');
+        break;
+      }
+    } catch(e) {}
+    log(`Aștept... (${tries * 8}s)`, 'info');
+  }
+
+  if (!runId) throw new Error('Workflow-ul nu a pornit. Verifică permisiunile token-ului (trebuie bifat: workflow).');
+
+  state.runId = runId;
+  document.getElementById('actionsLink').href = `https://github.com/${state.username}/${state.repoName}/actions/runs/${runId}`;
+
+  setProgress(55);
+
+  // Poll run status
+  tries = 0;
+  let lastStatus = '';
+  while (tries < maxWait) {
+    await sleep(10000);
+    tries++;
+
+    let run;
+    try {
+      run = await ghFetch(`/repos/${state.username}/${state.repoName}/actions/runs/${runId}`);
+    } catch(e) { continue; }
+
+    const status = run.status;
+    const conclusion = run.conclusion;
+
+    if (status !== lastStatus) {
+      log(`Status: ${status}${conclusion ? ' → ' + conclusion : ''}`, conclusion === 'failure' ? 'err' : 'info');
+      lastStatus = status;
+    }
+
+    const elapsed = tries * 10;
+    setProgress(55 + Math.min(35, elapsed / 6));
+
+    if (status === 'completed') {
+      if (conclusion === 'success') {
+        log('Build finalizat cu succes! 🎉', 'ok');
+        setProgress(95);
+        await fetchArtifact(runId);
+        return;
+      } else {
+        throw new Error(`Build eșuat: ${conclusion}. Vezi log-urile pe GitHub Actions.`);
+      }
+    }
+
+    if (elapsed % 60 === 0) log(`Build în curs... ${elapsed}s trecuți`, 'warn');
+  }
+
+  throw new Error('Timeout — build-ul durează prea mult. Verifică GitHub Actions manual.');
+}
+
+async function fetchArtifact(runId) {
+  log('Caut artifact APK...');
+  const data = await ghFetch(`/repos/${state.username}/${state.repoName}/actions/runs/${runId}/artifacts`);
+  if (!data.artifacts || data.artifacts.length === 0) throw new Error('Nu s-a găsit APK-ul în artifacts.');
+
+  const artifact = data.artifacts[0];
+  state.artifactUrl = artifact.archive_download_url;
+
+  setProgress(100);
+
+  const appName = document.getElementById('appName').value || 'MyApp';
+  document.getElementById('apkName').textContent = appName + '-debug.apk';
+  document.getElementById('apkRepo').textContent = state.repoName;
+
+  document.getElementById('downloadCard').classList.add('visible');
+  document.getElementById('buildBtn').disabled = false;
+  document.getElementById('buildSpinner').style.display = 'none';
+  document.getElementById('backBtn').disabled = false;
+
+  log('APK disponibil pentru download!', 'ok');
+}
+
+async function downloadAPK() {
+  if (!state.artifactUrl) return;
+  // GitHub requires auth for artifact download
+  const r = await fetch(state.artifactUrl, {
+    headers: { Authorization: 'token ' + state.token }
+  });
+  const blob = await r.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = (document.getElementById('appName').value || 'MyApp') + '-debug.zip';
+  a.click();
+  URL.revokeObjectURL(url);
+  log('Download pornit! (ZIP conține APK-ul)', 'ok');
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+</script>
+</body>
+</html>
